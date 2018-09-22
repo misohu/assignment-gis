@@ -1,0 +1,14 @@
+*.pyc
+*.pyo
+*.swp
+*.sqlite3
+*.sql
+
+*.exe
+*.so
+*.lib
+
+*.sublime-project
+*.sublime-workspace
+
+__pycache__
