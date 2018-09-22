@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  db:
+    image: kartoza/postgis
+    environment:
+      - POSTGRES_DB=gis
+      - POSTGRES_USER=pocik
+      - POSTGRES_PASSWORD=pocik
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  backend:
+    hostname: backend
+    build:
+      context: ./app
+      args:
+        UID: 1000
+        GID: 1000
+    volumes:
+      - ./app/gis_app:/app:rw
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: runserver_plus --nothreading 0.0.0.0:8000
+
+volumes:
+  db-data:
