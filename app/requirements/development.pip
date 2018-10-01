@@ -7,3 +7,4 @@ ipython
 ipdb
 django-debug-toolbar
 requests
+djangorestframework

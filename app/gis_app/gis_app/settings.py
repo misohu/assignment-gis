@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     'django.contrib.gis',
+    'geo_backend',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
@@ -82,7 +84,7 @@ DATABASES = {
         'USER': 'pocik',
         'PASSWORD': 'pocik',
         'HOST': 'db',
-        'PORT': '',
+        'PORT': '5432',
     }
 }
 
