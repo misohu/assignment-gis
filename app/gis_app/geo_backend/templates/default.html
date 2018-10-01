@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Interactive maps for Django web apps</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+  </head>
+  <body>
+   <h1>Map time!</h1>
+   <div id='map'></div>
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoicG9jaWsiLCJhIjoiY2pta2p6ejg3MGp6ejNrcXN2Z29zOGZwNCJ9.jDCPW258dliRWnmoe9t8PQ';
+    var map = new mapboxgl.Map({
+	container: 'map',
+	style: 'mapbox://styles/mapbox/streets-v10'
+    });
+
+
+map.on('load', function () {
+
+    map.addLayer({
+        "id": "places",
+        "type": "symbol",
+        "source": {
+            "type": "geojson",
+            "data": {{ plants|safe }}
+        },
+        "layout": {
+            "text-field": "{name}",
+	    "icon-image": "{icon}-15",
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-offset": [0, 0.6],
+            "text-anchor": "top"
+        }
+    });
+});
+
+map.on('click', 'places', function (e) {
+        try {
+			map.removeLayer('maine');
+			map.removeSource('maine');
+        } catch(err) {
+        }
+		var coordinates = e.features[0].geometry.coordinates.slice();
+		var lon = coordinates[0];
+		var lat = coordinates[1];
+		$.ajax({
+			url: '/polygon',
+			data: { lat:lat, lon:lon},
+			success: (response) => {
+				console.log("Success");
+				map.addLayer({
+					'id': 'maine',
+        			'type': 'fill',
+        			'source': {
+            			'type': 'geojson',
+            			'data': {
+                			'type': 'Feature',
+                			'geometry': response.polygon }},
+
+					'layout': {},
+        			'paint': {
+            			'fill-color': '#088',
+            			'fill-opacity': 0.8
+        		}});
+			}
+    });
+});
+
+</script>
+  </body>
+</html>
