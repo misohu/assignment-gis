@@ -15,7 +15,7 @@ def default_map(request):
     geometry_field='mpoly', fields=('name', 'link',)))
     for i in res_dict['features']:
         i['properties']['description'] = i['properties']['link']
-        i['properties']['icon'] = 'theatre'
+        i['properties']['icon'] = 'marker'
     return render(request, 'default.html', 
             {'mapbox_access_token':"pk.eyJ1IjoicG9jaWsiLCJhIjoiY2pta2p6ejg3MGp6ejNrcXN2Z29zOGZwNCJ9.jDCPW258dliRWnmoe9t8PQ",
                 "plants": json.dumps(res_dict)})
@@ -29,9 +29,15 @@ def get_polygon(request):
    cursor.execute('''
         SELECT ST_AsGeoJSON(
             ST_AsText(
+            ST_Transform(
                 st_buffer(
-                    ST_MakePoint(%s, %s), 50, 'quad_segs=8')
-                )
+                    ST_Transform(
+                        ST_GeomFromText('POINT({} {})',4326),
+                 26986), 1100000, 'quad_segs=8'), 4326
+                ))
             );
-        ''', [lon, lat])
-   return Response({'polygon': json.loads(cursor.fetchall()[0][0])})
+        '''.format(lon, lat))
+   area = json.loads(cursor.fetchall()[0][0])
+   print(lon, lat)
+   print(area)
+   return Response({'polygon': area})
