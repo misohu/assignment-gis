@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
   <head>
@@ -37,16 +38,13 @@
             overflow:hidden;
             border-right:1px solid rgba(0,0,0,0.25);
           }
-          .pad2 {
-            padding:20px;
-          }
           .quiet {
             color:#888;
           }
           .map {
             position:absolute;
             left:20%;
-            width:80%;
+            width:79%;
             top:0;bottom:0;
           }
           .menu{
@@ -77,15 +75,23 @@
           .listings .item:last-child { border-bottom:none; }
           .listings .item .title {
             display:block;
-            color:#00853e;
+            color:#000000;
             font-weight:700;
           }
           .listings .item .title small { font-weight:400; }
           .listings .item.active .title,
-          .listings .item .title:hover { color:#8cc63f; }
+          .listings .item .title:hover { color:#A9A9A9; }
           .listings .item.active {
             background-color:#f8f8f8;
           }
+          .marker {
+              background-image: url({% static "gis_app/mapbox-icon.png" %});
+              background-size: cover;
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              cursor: pointer;
+            }
     </style>
 
   <body>
@@ -96,8 +102,10 @@
             </div>
             <div id='listings' class='listings'>
                 {% for reactor in reactor_list %}
-                    <div class="item">
-                        {{ reactor.name }}
+                    <div class="item" id= {{ reactor.shp_id }} data-lon={{ reactor.lon }} data-lat={{ reactor.lat }} onclick="zoomOn(this)">
+                        <a href=# class='title'>
+                        {{ reactor.name|lower }}
+                        </a>
                     </div>
                 {% endfor %}
             </div>
@@ -137,12 +145,25 @@
         });
     });
 
+    var marker = new mapboxgl.Marker()
+
+    map.on('click', function (e) {
+        console.log(e)
+        marker.setLngLat(new mapboxgl.LngLat(e.lngLat.lng, e.lngLat.lat))
+        marker.addTo(map)
+    });
+
     map.on('click', 'places', function (e) {
             try {
-            map.removeLayer('polygon_air');
-            map.removeSource('polygon_air');
-            map.removeLayer('polygon_explosion');
-            map.removeSource('polygon_explosion');
+                map.removeLayer('polygon_air');
+                map.removeSource('polygon_air');
+                map.removeLayer('polygon_explosion');
+                map.removeSource('polygon_explosion');
+                marker.remove();
+            } catch(err) {
+            }
+            try {
+                marker.remove();
             } catch(err) {
             }
             var coordinates = e.features[0].geometry.coordinates.slice();
@@ -152,7 +173,6 @@
                 url: '/polygon',
                 data: { lat:lat, lon:lon},
                 success: (response) => {
-                    console.log("Success");
                     map.addLayer({
                         'id': 'polygon_air',
                             'type': 'fill',
@@ -203,6 +223,7 @@
 
     map.on('click', function (e) {
         console.log(e.lngLat)
+        map.flyTo({center: e.lngLat})
         $.ajax({
             url: '/surroundings',
             data: { 
@@ -210,13 +231,21 @@
                 lon:e.lngLat.lng
             },
             success: (response) => {
+
                 $('.listings').empty()
                 $('.listings').append(
                     response.plants.map(
-                        x => "<div class='item'>" + x + "</div>").reduce((x,y)=> x+y))
+                        x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a></div>").reduce((x,y)=> x+y))
             }
         })
     });
+
+    function zoomOn(element){
+        map.flyTo({center: [
+            $(element).data('lon'),
+            $(element).data('lat')
+        ]})
+    }
 </script>
   </body>
 </html>

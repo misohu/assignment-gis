@@ -55,7 +55,7 @@ def get_surroundings(request):
    connection = connections['default']
    cursor = connection.cursor()
    cursor.execute('''
-        SELECT name
+        SELECT name, lat, lon, shp_id
         FROM geo_backend_powerplant 
         WHERE st_intersects(
                 st_buffer(ST_GeomFromText('POINT({} {})')::geography, 1100000, 'quad_segs=8'),
@@ -64,5 +64,9 @@ def get_surroundings(request):
    x = cursor.fetchall()
    print(x)
    return Response({
-        "plants": list(map(lambda f: f[0], x))
+        "plants": list(map(lambda f: {
+            "name": f[0],
+            "lat": f[1],
+            "lon": f[2],
+            "shp_id": f[3]}, x))
     })
