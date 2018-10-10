@@ -12,10 +12,10 @@ from .models import PowerPlant
 
 def default_map(request):
     res_dict = json.loads(serialize('geojson', PowerPlant.objects.all(),
-    geometry_field='mpoly', fields=('shp_id', 'name', 'link',)))
+    geometry_field='mpoly', fields=('shp_id', 'name', 'link', 'built', 'image')))
     for index, i in enumerate(res_dict['features']):
         i['id'] = index
-        i['properties']['description'] = i['properties']['link']
+        i['properties']['description'] = "<div><strong>Link:</strong> <a href ="+ i['properties']['link']+">"+i['properties']['link']+"</a></div><div><strong>Built in:</strong> " + str(int(i['properties']['built'])) + "</div><img src=" + i['properties']['image']+ " width=200 height=200>"
         i['properties']['icon'] = 'marker'
     # print(json.dumps(res_dict))
     return render(request, 'default.html', 
@@ -55,11 +55,12 @@ def get_surroundings(request):
    connection = connections['default']
    cursor = connection.cursor()
    cursor.execute('''
-        SELECT name, lat, lon, shp_id
-        FROM geo_backend_powerplant 
+        SELECT name, lat, lon, shp_id, st_distance(point::geography, g.mpoly::geography) as dist
+        FROM geo_backend_powerplant as g,  ST_GeomFromText('POINT({} {})') as point
         WHERE st_intersects(
-                st_buffer(ST_GeomFromText('POINT({} {})')::geography, 1100000, 'quad_segs=8'),
-                mpoly::geography);
+            st_buffer(point::geography, 1100000, 'quad_segs=8'),
+            g.mpoly::geography)
+        ORDER BY dist;
         '''.format(lon, lat))
    x = cursor.fetchall()
    print(x)
@@ -68,5 +69,6 @@ def get_surroundings(request):
             "name": f[0],
             "lat": f[1],
             "lon": f[2],
-            "shp_id": f[3]}, x))
+            "shp_id": f[3],
+            "dist": f[4]}, x))
     })

@@ -67,14 +67,19 @@
             padding-bottom:60px;
           }
           .listings .item {
-            display:block;
+            display:flex;
             border-bottom:1px solid #eee;
             padding:10px;
             text-decoration:none;
           }
+          .listings .item span{
+            flex:50%;
+            text-align:right;
+          }
           .listings .item:last-child { border-bottom:none; }
           .listings .item .title {
             display:block;
+            flex:50%;
             color:#000000;
             font-weight:700;
           }
@@ -154,6 +159,16 @@
     });
 
     map.on('click', 'places', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.description;
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
             try {
                 map.removeLayer('polygon_air');
                 map.removeSource('polygon_air');
@@ -235,7 +250,7 @@
                 $('.listings').empty()
                 $('.listings').append(
                     response.plants.map(
-                        x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a></div>").reduce((x,y)=> x+y))
+                        x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a><span>"+ Math.round(x.dist/1000) +"km</span></div>").reduce((x,y)=> x+y))
             }
         })
     });
