@@ -12,3 +12,8 @@
 *.sublime-workspace
 
 __pycache__
+
+.DS_Store
+
+env/
+app/gis_app/geo_backend/data/

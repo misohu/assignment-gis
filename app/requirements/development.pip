@@ -1,0 +1,10 @@
+django
+psycopg2
+markdown
+django-extensions
+werkzeug
+ipython
+ipdb
+django-debug-toolbar
+requests
+djangorestframework

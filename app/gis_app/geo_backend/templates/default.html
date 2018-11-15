@@ -1,0 +1,360 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Interactive maps for Django web apps</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <style>
+        body {
+            color:#404040;
+            font:400 15px/22px 'Source Sans Pro', 'Helvetica Neue', Sans-serif;
+            margin:0;
+            padding:0;
+            -webkit-font-smoothing:antialiased;
+          }
+          * {
+            -webkit-box-sizing:border-box;
+            -moz-box-sizing:border-box;
+            box-sizing:border-box;
+          }
+          h1 {
+            font-size:22px;
+            margin:0;
+            font-weight:400;
+          }
+          h2,h3 {
+              margin: 10px;
+              font-size: 1.2em;
+          }
+          p {
+              font-size: 0.85em;
+              margin: 10px;
+              text-align: left;
+            }
+          a {
+            color:#404040;
+            text-decoration:none;
+          }
+          a:hover { color:#101010; }
+
+          .sidebar {
+            position:absolute;
+            width:20%;
+            height:100%;
+            top:0;left:0;
+            overflow:hidden;
+            border-right:1px solid rgba(0,0,0,0.25);
+          }
+          .quiet {
+            color:#888;
+          }
+          .map {
+            position:absolute;
+            left:20%;
+            width:79%;
+            top:0;bottom:0;
+          }
+          .menu{
+            background:#fff;
+            border-bottom:1px solid #eee;
+            height:60px;
+            line-height:60px;
+            padding:0 10px;
+          }
+          .heading {
+            background:#fff;
+            border-bottom:1px solid #eee;
+            height:60px;
+            line-height:60px;
+            padding:0 10px;
+          }
+          .listings {
+            height:100%;
+            overflow:auto;
+            padding-bottom:60px;
+          }
+          .listings .item {
+            display:flex;
+            border-bottom:1px solid #eee;
+            padding:10px;
+            text-decoration:none;
+          }
+          .listings .item span{
+            flex:50%;
+            text-align:right;
+          }
+          .listings .item:last-child { border-bottom:none; }
+          .listings .item .title {
+            display:block;
+            flex:50%;
+            color:#000000;
+            font-weight:700;
+          }
+          .listings .item .title small { font-weight:400; }
+          .listings .item.active .title,
+          .listings .item .title:hover { color:#A9A9A9; }
+          .listings .item.active {
+            background-color:#f8f8f8;
+          }
+          .marker {
+              background-image: url({% static "gis_app/mapbox-icon.png" %});
+              background-size: cover;
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              cursor: pointer;
+         }
+         .map-overlay {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.8);
+          margin-right: 20px;
+          font-family: Arial, sans-serif;
+          overflow: auto;
+          border-radius: 3px;
+        }
+         #legend {
+          padding: 10px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          line-height: 18px;
+          height: 60px;
+          margin-bottom: 40px;
+          width: 140px;
+        }
+        .legend-key {
+          display: inline-block;
+          border-radius: 20%;
+          width: 10px;
+          height: 10px;
+          margin-right: 5px;
+        }
+
+        #features {
+          top: 0;
+          height: 130px;
+          margin-top: 20px;
+          width: 250px;
+        }
+    </style>
+
+  <body>
+   <body>
+        <div class='sidebar'>
+            <div class='heading'>
+                <h1 id='reactorsH'>All reactors:</h1>
+            </div>
+            <div id='listings' class='listings'>
+                {% for reactor in reactor_list %}
+                    <div class="item" id= {{ reactor.shp_id }} data-lon={{ reactor.lon }} data-lat={{ reactor.lat }} onclick="zoomOn(this)">
+                        <a href=# class='title'>
+                        {{ reactor.name|lower }}
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div id='map' class='map pad2'></div>
+        <div class='map-overlay' id='legend'></div>
+        <div class='map-overlay' id='features'><h2>Worlds nuclear reactors</h2><div id='pd'><p>Click on the map to see which reactor can endanger you</p>
+            <p>Show all zones:<input type="checkbox" name="show_all" onchange="handleZones(this)"></p></div></div>
+
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoicG9jaWsiLCJhIjoiY2pta2p6ejg3MGp6ejNrcXN2Z29zOGZwNCJ9.jDCPW258dliRWnmoe9t8PQ';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/light-v9',
+        center: [2.832719395457275, 47.75058233734623],
+        zoom: 6.07
+    });
+
+
+    map.on('load', function () {
+
+        map.addLayer({
+            "id": "places",
+            "type": "symbol",
+            "source": {
+                "type": "geojson",
+                "data": {{ plants|safe }}
+            },
+            "layout": {
+                "text-field": "{name}",
+            "icon-image": "{icon}-15",
+                "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+                "text-offset": [0, 0.6],
+                "text-anchor": "top"
+            },
+        "paint": {
+            "icon-color" : "#ff0000"
+        }
+
+        });
+
+        var layers = ['1 day impact', '3 day impact'];
+        var colors = ['#e55e5e', '#088'];
+
+        for (i = 0; i < layers.length; i++) {
+          var layer = layers[i];
+          var color = colors[i];
+          var item = document.createElement('div');
+          var key = document.createElement('span');
+          key.className = 'legend-key';
+          key.style.backgroundColor = color;
+
+          var value = document.createElement('span');
+          value.innerHTML = layer;
+          item.appendChild(key);
+          item.appendChild(value);
+          legend.appendChild(item);
+        }
+    });
+
+    var marker = new mapboxgl.Marker()
+
+    map.on('click', function (e) {
+        console.log(e)
+        marker.setLngLat(new mapboxgl.LngLat(e.lngLat.lng, e.lngLat.lat))
+        marker.addTo(map)
+    });
+
+    map.on('click', 'places', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.description;
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+            try {
+                map.removeLayer('polygon_air');
+                map.removeSource('polygon_air');
+                map.removeLayer('polygon_explosion');
+                map.removeSource('polygon_explosion');
+                marker.remove();
+            } catch(err) {
+            }
+            try {
+                marker.remove();
+            } catch(err) {
+            }
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var lon = coordinates[0];
+            var lat = coordinates[1];
+            $.ajax({
+                url: '/polygon',
+                data: { lat:lat, lon:lon},
+                success: (response) => {
+                    map.addLayer({
+                        'id': 'polygon_air',
+                            'type': 'fill',
+                            'source': {
+                                    'type': 'geojson',
+                                    'data': {
+                                        'type': 'Feature',
+                                        'geometry': response.polygon_air
+                            }
+                        },
+                        'layout': {},
+                            'paint': {
+                                'fill-color': '#088',
+                                'fill-opacity': 0.6
+                        }
+                    });
+                    map.addLayer({
+                        'id': 'polygon_explosion',
+                            'type': 'fill',
+                            'source': {
+                                    'type': 'geojson',
+                                    'data': {
+                                        'type': 'Feature',
+                                        'geometry': response.polygon_explosion
+                            }
+                        },
+                        'layout': {},
+                            'paint': {
+                                'fill-color': '#e55e5e',
+                                'fill-opacity': 0.8
+                        }
+                    });
+                    $('#reactorsH').text('Dangerous reactors nearby:');
+                }
+        });
+    });
+
+    map.on('mouseenter', 'places', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'places', function () {
+        map.getCanvas().style.cursor = '';
+    });
+
+    map.on('click', 'places', function (e) {
+        map.flyTo({center: e.features[0].geometry.coordinates});
+    });
+
+    map.on('click', function (e) {
+        console.log(e.lngLat)
+        map.flyTo({center: e.lngLat})
+        $.ajax({
+            url: '/surroundings',
+            data: { 
+                lat:e.lngLat.lat, 
+                lon:e.lngLat.lng
+            },
+            success: (response) => {
+
+                $('.listings').empty()
+                $('.listings').append(
+                    response.plants.map(
+                        x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a><span>"+ Math.round(x.dist/1000) +"km</span></div>").reduce((x,y)=> x+y))
+            $('#reactorsH').text('Dangerous reactors nearby:');
+            }
+        })
+    });
+
+    function zoomOn(element){
+        map.flyTo({center: [
+            $(element).data('lon'),
+            $(element).data('lat')
+        ]})
+    }
+
+    function handleZones(checkbox) {
+        if(!checkbox.checked){
+            map.removeLayer('all_plants');
+            map.removeSource('all_plants');
+        } else {
+            $.ajax({
+                url: '/all_plants',
+                success: (response) => {
+                     map.addLayer({
+                        "id": "all_plants",
+                        "type": "fill",
+                        "source": {
+                            "type": "geojson",
+                            "data": {
+                                "type": "FeatureCollection",
+                                "features": response.all_plants
+                            }
+                        },
+                        'layout': {},
+                        'paint': {
+                            'fill-color': '#088',
+                            'fill-opacity': 0.1
+                         }
+
+                    })
+                }
+            });
+        }
+    }
+</script>
+  </body>
+</html>
