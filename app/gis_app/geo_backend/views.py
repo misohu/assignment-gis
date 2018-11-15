@@ -32,7 +32,7 @@ def get_polygon(request):
    connection = connections['default']
    cursor = connection.cursor()
    cursor.execute('''
-        SELECT ST_AsGeoJSON(st_buffer( ST_GeomFromText('POINT({} {})')::geography, 1100000, 'quad_segs=8'));
+        SELECT ST_AsGeoJSON(st_buffer( ST_GeomFromText('POINT({} {})')::geography, 500000, 'quad_segs=8'));
         '''.format(lon, lat))
    area_air = json.loads(cursor.fetchall()[0][0])
    cursor.execute('''
@@ -58,7 +58,7 @@ def get_surroundings(request):
         SELECT name, lat, lon, shp_id, st_distance(point::geography, g.mpoly::geography) as dist
         FROM geo_backend_powerplant as g,  ST_GeomFromText('POINT({} {})') as point
         WHERE st_intersects(
-            st_buffer(point::geography, 1100000, 'quad_segs=8'),
+            st_buffer(point::geography, 500000, 'quad_segs=8'),
             g.mpoly::geography)
         ORDER BY dist;
         '''.format(lon, lat))
@@ -72,3 +72,15 @@ def get_surroundings(request):
             "shp_id": f[3],
             "dist": f[4]}, x))
     })
+
+@api_view(['GET'])
+def get_all_buffers(request): 
+    connection = connections['default']
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT DISTINCT ST_AsGeoJSON(st_buffer(mpoly::geography, 500000, 'quad_segs=8')) 
+        FROM geo_backend_powerplant;
+        ''')
+    x = cursor.fetchall()
+    return Response(
+      {'all_plants': list(map(lambda x: {"type": "Feature", "geometry": json.loads(x[0])}, x))})

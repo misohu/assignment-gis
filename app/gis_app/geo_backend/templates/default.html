@@ -24,6 +24,15 @@
             margin:0;
             font-weight:400;
           }
+          h2,h3 {
+              margin: 10px;
+              font-size: 1.2em;
+          }
+          p {
+              font-size: 0.85em;
+              margin: 10px;
+              text-align: left;
+            }
           a {
             color:#404040;
             text-decoration:none;
@@ -96,14 +105,46 @@
               height: 50px;
               border-radius: 50%;
               cursor: pointer;
-            }
+         }
+         .map-overlay {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.8);
+          margin-right: 20px;
+          font-family: Arial, sans-serif;
+          overflow: auto;
+          border-radius: 3px;
+        }
+         #legend {
+          padding: 10px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          line-height: 18px;
+          height: 60px;
+          margin-bottom: 40px;
+          width: 140px;
+        }
+        .legend-key {
+          display: inline-block;
+          border-radius: 20%;
+          width: 10px;
+          height: 10px;
+          margin-right: 5px;
+        }
+
+        #features {
+          top: 0;
+          height: 130px;
+          margin-top: 20px;
+          width: 250px;
+        }
     </style>
 
   <body>
    <body>
         <div class='sidebar'>
             <div class='heading'>
-                <h1>Nuclear reactors:</h1>
+                <h1 id='reactorsH'>All reactors:</h1>
             </div>
             <div id='listings' class='listings'>
                 {% for reactor in reactor_list %}
@@ -116,6 +157,9 @@
             </div>
         </div>
         <div id='map' class='map pad2'></div>
+        <div class='map-overlay' id='legend'></div>
+        <div class='map-overlay' id='features'><h2>Worlds nuclear reactors</h2><div id='pd'><p>Click on the map to see which reactor can endanger you</p>
+            <p>Show all zones:<input type="checkbox" name="show_all" onchange="handleZones(this)"></p></div></div>
 
 <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoicG9jaWsiLCJhIjoiY2pta2p6ejg3MGp6ejNrcXN2Z29zOGZwNCJ9.jDCPW258dliRWnmoe9t8PQ';
@@ -148,6 +192,24 @@
         }
 
         });
+
+        var layers = ['1 day impact', '3 day impact'];
+        var colors = ['#e55e5e', '#088'];
+
+        for (i = 0; i < layers.length; i++) {
+          var layer = layers[i];
+          var color = colors[i];
+          var item = document.createElement('div');
+          var key = document.createElement('span');
+          key.className = 'legend-key';
+          key.style.backgroundColor = color;
+
+          var value = document.createElement('span');
+          value.innerHTML = layer;
+          item.appendChild(key);
+          item.appendChild(value);
+          legend.appendChild(item);
+        }
     });
 
     var marker = new mapboxgl.Marker()
@@ -220,6 +282,7 @@
                                 'fill-opacity': 0.8
                         }
                     });
+                    $('#reactorsH').text('Dangerous reactors nearby:');
                 }
         });
     });
@@ -251,6 +314,7 @@
                 $('.listings').append(
                     response.plants.map(
                         x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a><span>"+ Math.round(x.dist/1000) +"km</span></div>").reduce((x,y)=> x+y))
+            $('#reactorsH').text('Dangerous reactors nearby:');
             }
         })
     });
@@ -260,6 +324,36 @@
             $(element).data('lon'),
             $(element).data('lat')
         ]})
+    }
+
+    function handleZones(checkbox) {
+        if(!checkbox.checked){
+            map.removeLayer('all_plants');
+            map.removeSource('all_plants');
+        } else {
+            $.ajax({
+                url: '/all_plants',
+                success: (response) => {
+                     map.addLayer({
+                        "id": "all_plants",
+                        "type": "fill",
+                        "source": {
+                            "type": "geojson",
+                            "data": {
+                                "type": "FeatureCollection",
+                                "features": response.all_plants
+                            }
+                        },
+                        'layout': {},
+                        'paint': {
+                            'fill-color': '#088',
+                            'fill-opacity': 0.1
+                         }
+
+                    })
+                }
+            });
+        }
     }
 </script>
   </body>
