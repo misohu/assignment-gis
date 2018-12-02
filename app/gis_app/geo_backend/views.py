@@ -117,7 +117,7 @@ def get_state(request):
     cursor.execute('''
         SELECT ST_AsGeoJSON(geom), ST_AsGeoJSON(ST_Centroid(geom))
         FROM geo_backend_worldstates
-        WHERE sovereignt like '{}'
+        WHERE sovereignt like '{}%'
         ORDER BY st_area(geom) desc
         LIMIT 1
         '''.format(name))
