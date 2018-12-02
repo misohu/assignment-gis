@@ -7,5 +7,7 @@ urlpatterns = [
     # url(r'^polygon/(?P<lon>-?\d+.?\d+)/(?P<lat>-?\d+.?\d+)/$', views.get_polygon, name="polygon"),
     url(r'polygon/', views.get_polygon, name="polygon"),
     url(r'surroundings/', views.get_surroundings, name="surroundings"),
-    url(r'all_plants/', views.get_all_buffers, name="all_plants")
+    url(r'all_plants/', views.get_all_buffers, name="all_plants"),
+    url(r'states/', views.get_states, name="all_states"),
+    url(r'state/', views.get_state, name="state"),
 ]

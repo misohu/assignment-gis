@@ -84,3 +84,44 @@ def get_all_buffers(request):
     x = cursor.fetchall()
     return Response(
       {'all_plants': list(map(lambda x: {"type": "Feature", "geometry": json.loads(x[0])}, x))})
+
+@api_view(['GET'])
+def get_states(request): 
+    '''
+    Tabel state_reactors was created with
+      CREATE TABLE state_reactors AS
+      SELECT states.sovereignt, count(*) as count
+      FROM geo_backend_worldstates as states
+      JOIN geo_backend_powerplant as plants
+      ON st_intersects(
+        states.geom, st_buffer(
+          plants.mpoly::geography, 500000, 'quad_segs=8'))
+      GROUP BY states.sovereignt
+    '''
+    connection = connections['default']
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT *
+        FROM state_reactors
+        ORDER BY count desc
+        ''')
+    x = cursor.fetchall()
+    return Response(
+      {'all_states': list(map(lambda x: {"state": x[0], "count": x[1]}, x))})
+
+@api_view(['GET'])
+def get_state(request):
+    name = request.GET.get('state', 0)
+    connection = connections['default']
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT ST_AsGeoJSON(geom), ST_AsGeoJSON(ST_Centroid(geom))
+        FROM geo_backend_worldstates
+        WHERE sovereignt like '{}'
+        ORDER BY st_area(geom) desc
+        LIMIT 1
+        '''.format(name))
+    x = cursor.fetchall()
+    return Response(
+      {'state': {"type": "Feature", "geometry": json.loads(x[0][0])},
+       'centroid': json.loads(x[0][1])})

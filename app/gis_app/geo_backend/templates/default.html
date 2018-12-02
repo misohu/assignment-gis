@@ -134,7 +134,7 @@
 
         #features {
           top: 0;
-          height: 130px;
+          height: 160px;
           margin-top: 20px;
           width: 250px;
         }
@@ -159,7 +159,8 @@
         <div id='map' class='map pad2'></div>
         <div class='map-overlay' id='legend'></div>
         <div class='map-overlay' id='features'><h2>Worlds nuclear reactors</h2><div id='pd'><p>Click on the map to see which reactor can endanger you</p>
-            <p>Show all zones:<input type="checkbox" name="show_all" onchange="handleZones(this)"></p></div></div>
+            <p>Show all zones:<input type="checkbox" name="show_all" onchange="handleZones(this)"></p>
+            <p>Show reactors per state:<input type="checkbox" name="show_states" onchange="handleStates(this)"></p></div></div>
 
 <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoicG9jaWsiLCJhIjoiY2pta2p6ejg3MGp6ejNrcXN2Z29zOGZwNCJ9.jDCPW258dliRWnmoe9t8PQ';
@@ -282,7 +283,7 @@
                                 'fill-opacity': 0.8
                         }
                     });
-                    $('#reactorsH').text('Dangerous reactors nearby:');
+                    $('#reactorsH').text('Reactors nearby:');
                 }
         });
     });
@@ -354,6 +355,64 @@
                 }
             });
         }
+    }
+
+    function handleStates(checkbox) {
+        if(!checkbox.checked){
+            $('.listings').empty()
+        } else {
+            $.ajax({
+              url: '/states',
+                success: (response) => { 
+                  $('.listings').empty()
+                  $('.listings').append(
+                       response.all_states.map(
+                                  x => "<div class='item' data-state="+ x.state.replace(" ", "_") + " onclick='findState(this)'><a href=# class='title'>" + x.state + "</a><span>"+ x.count +"</span></div>").reduce((x,y)=> x+y))
+                  $('#reactorsH').text('Reactors per state:');
+                }
+            });
+        }
+    }
+
+    function findState(element){
+        try {
+                map.removeLayer('state');
+                map.removeSource('state');
+                marker.remove();
+                map.removeLayer('polygon_air');
+                map.removeSource('polygon_air');
+                map.removeLayer('polygon_explosion');
+                map.removeSource('polygon_explosion');
+            } catch(err) {
+            }
+            try {
+                marker.remove();
+            } catch(err) {
+            }
+        $.ajax({
+            url: '/state',
+            data: {state: $(element).data('state')},
+              success: (response) => { 
+              map.addLayer({
+                        "id": "state",
+                        "type": "fill",
+                        "source": {
+                            "type": "geojson",
+                            "data": {
+                                "type": "FeatureCollection",
+                                "features": [response.state]
+                            }
+                        },
+                        'layout': {},
+                        'paint': {
+                            'fill-color': '#e6b3ff',
+                            'fill-opacity': 0.4
+                         }
+
+                    })
+              map.flyTo({center: response.centroid.coordinates})
+          }
+      });
     }
 </script>
   </body>
