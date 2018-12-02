@@ -314,7 +314,7 @@
                 $('.listings').append(
                     response.plants.map(
                         x => "<div class='item' id="+ x.shp_id +" data-lon="+ x.lon +" data-lat="+ x.lat +" onclick='zoomOn(this)'><a href=# class='title'>" + x.name.toLowerCase() + "</a><span>"+ Math.round(x.dist/1000) +"km</span></div>").reduce((x,y)=> x+y))
-            $('#reactorsH').text('Dangerous reactors nearby:');
+            $('#reactorsH').text('Reactors nearby:');
             }
         })
     });
